@@ -1,0 +1,62 @@
+{
+  "series": [
+    {
+      "name": "T1w",
+      "match": "MPRAGE|AnatBrain_T1W3D",
+      "datatype": "anat",
+      "suffix": "T1w",
+      "priority": 10
+    },
+    {
+      "name": "FLAIR",
+      "match": "T2FLAIR",
+      "datatype": "anat",
+      "suffix": "FLAIR",
+      "priority": 10
+    },
+    {
+      "name": "b0neg",
+      "match": "b0neg",
+      "datatype": "fmap",
+      "suffix": "epi",
+      "dir": "jminus",
+      "priority": 20
+    },
+    {
+      "name": "tcos1",
+      "match": "tcos1",
+      "datatype": "dwi",
+      "suffix": "dwi",
+      "acq": "tcos1",
+      "dir": "j",
+      "priority": 20
+    },
+    {
+      "name": "tcos2",
+      "match": "tcos2",
+      "datatype": "dwi",
+      "suffix": "dwi",
+      "acq": "tcos2",
+      "dir": "j",
+      "priority": 20
+    },
+    {
+      "name": "tpgse1",
+      "match": "tpgse_?1",
+      "datatype": "dwi",
+      "suffix": "dwi",
+      "acq": "tpgse1",
+      "dir": "j",
+      "priority": 20
+    },
+    {
+      "name": "tpgse2",
+      "match": "tpgse_?2",
+      "datatype": "dwi",
+      "suffix": "dwi",
+      "acq": "tpgse2",
+      "dir": "j",
+      "priority": 20
+    }
+  ]
+}

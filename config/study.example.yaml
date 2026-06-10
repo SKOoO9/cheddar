@@ -1,0 +1,54 @@
+{
+  "project_name": "CHEDDAR",
+  "dataset_name": "CHEDDAR diffusion study",
+  "dataset_type": "raw",
+  "default_session": "ses-01",
+  "profiles_file": "profiles.example.yaml",
+  "bidsmap_file": "bidsmap.example.yaml",
+  "subject_ids": {
+    "prefix": "sub",
+    "start": 1,
+    "width": 3
+  },
+  "paths": {
+    "root": "${CHEDDAR_ROOT:-.}",
+    "raw": "RawData",
+    "data": "Data",
+    "output": "Output",
+    "work": "Work",
+    "private": "Data/.private"
+  },
+  "privacy": {
+    "write_private_subject_map": true,
+    "private_subject_map": "Data/.private/subject_map.tsv",
+    "public_participant_columns": ["participant_id"]
+  },
+  "diffusion": {
+    "phase_encoding_direction": "j",
+    "reverse_phase_encoding_direction": "j-",
+    "total_readout_time": 0.0827807,
+    "merged_acq_label": "all",
+    "acquisitions": ["tcos1", "tcos2", "tpgse1", "tpgse2"],
+    "reverse_b0_acq": "b0neg"
+  },
+  "preprocessing": {
+    "anat": {
+      "n4": true,
+      "brain_extract": true,
+      "skullstrip": true
+    },
+    "dwi": {
+      "denoise": true,
+      "degibbs": true,
+      "topup_eddy": true,
+      "bias_correct": true,
+      "brain_mask": true,
+      "skullstrip": true,
+      "prefer_eddy_cuda": true,
+      "eddy_options": ["--repol"]
+    }
+  },
+  "sync": {
+    "excludes": [".DS_Store", ".idea", "Data", "Output", "Work", ".private"]
+  }
+}

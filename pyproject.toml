@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cheddar"
+version = "0.1.0"
+description = "CHEDDAR diffusion data synchronization, conversion, preprocessing, and QC wrapper."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "nibabel>=5.0",
+  "pydicom>=3.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+cheddar = "cheddar.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cheddar*"]
+

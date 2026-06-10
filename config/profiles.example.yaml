@@ -1,0 +1,59 @@
+{
+  "profiles": {
+    "local": {
+      "description": "Local macOS/Linux development profile with relative paths.",
+      "paths": {
+        "root": "${CHEDDAR_ROOT:-.}",
+        "raw": "RawData",
+        "data": "Data",
+        "output": "Output",
+        "work": "Work"
+      },
+      "tools": {
+        "dcm2niix": "dcm2niix",
+        "mrconvert": "mrconvert",
+        "dwidenoise": "dwidenoise",
+        "mrdegibbs": "mrdegibbs",
+        "dwifslpreproc": "dwifslpreproc",
+        "dwibiascorrect": "dwibiascorrect",
+        "dwi2mask": "dwi2mask",
+        "dwiextract": "dwiextract",
+        "mrmath": "mrmath",
+        "fslmerge": "fslmerge",
+        "fslroi": "fslroi",
+        "fslmaths": "fslmaths",
+        "bet": "bet",
+        "eddy": "eddy",
+        "eddy_cuda": "eddy_cuda",
+        "topup": "topup",
+        "N4BiasFieldCorrection": "N4BiasFieldCorrection",
+        "rsync": "rsync"
+      },
+      "sync": {
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-/path/to/smb/RawData}",
+        "gpu_root": "${CHEDDAR_GPU_ROOT:-/path/to/gpu/CHEDDAR}"
+      }
+    },
+    "smb-server": {
+      "description": "POSIX-mounted SMB server profile. Replace paths in private config.",
+      "paths": {
+        "root": "${CHEDDAR_ROOT:-/mnt/smb/CHEDDAR}"
+      },
+      "sync": {
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-/mnt/smb/incoming/CHEDDAR/RawData}"
+      }
+    },
+    "gpu-server": {
+      "description": "GPU Linux server profile. Replace paths in private config.",
+      "paths": {
+        "root": "${CHEDDAR_ROOT:-/data/CHEDDAR}"
+      },
+      "tools": {
+        "eddy_cuda": "eddy_cuda"
+      },
+      "sync": {
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-/data/CHEDDAR/RawData}"
+      }
+    }
+  }
+}

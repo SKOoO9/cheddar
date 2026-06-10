@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import shutil
+import subprocess
+from typing import Iterable
+
+
+def which(command: str) -> str | None:
+    return shutil.which(command)
+
+
+def shell_join(args: Iterable[str | Path]) -> str:
+    rendered: list[str] = []
+    for arg in args:
+        text = str(arg)
+        if not text or any(ch.isspace() for ch in text) or "'" in text:
+            rendered.append("'" + text.replace("'", "'\"'\"'") + "'")
+        else:
+            rendered.append(text)
+    return " ".join(rendered)
+
+
+@dataclass
+class CommandResult:
+    args: list[str]
+    returncode: int
+    stdout: str = ""
+    stderr: str = ""
+    dry_run: bool = False
+
+
+@dataclass
+class CommandRunner:
+    log_file: Path | None = None
+    dry_run: bool = False
+    env: dict[str, str] | None = None
+    records: list[dict[str, object]] = field(default_factory=list)
+
+    def run(self, args: Iterable[str | Path], *, cwd: str | Path | None = None, check: bool = True) -> CommandResult:
+        cmd = [str(arg) for arg in args]
+        record: dict[str, object] = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "command": cmd,
+            "rendered": shell_join(cmd),
+            "cwd": str(cwd) if cwd is not None else None,
+            "dry_run": self.dry_run,
+        }
+        if self.dry_run:
+            result = CommandResult(cmd, 0, dry_run=True)
+            record["returncode"] = 0
+            self._record(record)
+            print("DRY RUN:", record["rendered"])
+            return result
+
+        proc = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, env=self.env)
+        record.update({"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr})
+        self._record(record)
+        if check and proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, cmd, output=proc.stdout, stderr=proc.stderr)
+        return CommandResult(cmd, proc.returncode, proc.stdout, proc.stderr)
+
+    def _record(self, record: dict[str, object]) -> None:
+        self.records.append(record)
+        if self.log_file is None:
+            return
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        with self.log_file.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def command_version(command: str, *, args: tuple[str, ...] = ("--version",), timeout: float = 5.0) -> dict[str, object]:
+    found = which(command)
+    if found is None:
+        return {"command": command, "found": False, "path": None, "version": None}
+    try:
+        proc = subprocess.run([found, *args], text=True, capture_output=True, timeout=timeout)
+        text = (proc.stdout or proc.stderr).strip().splitlines()
+        version = text[0] if text else ""
+        return {"command": command, "found": True, "path": found, "version": version, "returncode": proc.returncode}
+    except Exception as exc:
+        return {"command": command, "found": True, "path": found, "version": None, "error": str(exc)}
+

@@ -1,0 +1,57 @@
+# Local operating-system and editor files
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Python build artifacts
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# CHEDDAR data and generated outputs: never commit these
+RawData/
+Data/
+Output/
+Work/
+backup/
+logs/
+work/
+rawdata/
+derivatives/
+sourcedata/
+*.DCM
+*.dcm
+*.dicom
+*.nii
+*.nii.gz
+*.bval
+*.bvec
+*.mif
+*.mgz
+*.mat
+*.h5
+*.hdf5
+*.jsonl
+*sync_manifest*.json
+*subject_map*.tsv
+*participants_key*.tsv
+*.log
+
+# Private local configuration
+config/study.yaml
+config/profiles.yaml
+config/bidsmap.yaml
+*.local.yaml
+*.private.yaml
+.private/
+**/.private/
+
