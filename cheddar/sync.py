@@ -9,7 +9,7 @@ from pathlib import Path
 import shutil
 from typing import Iterable
 
-from .config import ResolvedConfig
+from .config import ConfigError, ResolvedConfig
 from .runner import CommandRunner, which
 
 
@@ -95,9 +95,17 @@ def sync_tree(
     use_rsync: bool = True,
 ) -> list[SyncItem]:
     excludes = list(config.sync.get("excludes", []))
-    source_path = Path(source)
-    destination_path = Path(destination)
+    source_path = Path(source).expanduser()
+    destination_path = Path(destination).expanduser()
     manifest = config.output_root / "logs" / f"sync_manifest_{mode}.json"
+
+    if not source_path.exists():
+        raise ConfigError(
+            f"Sync source does not exist: {source_path}. "
+            "Set the appropriate source path in config/profiles.yaml or via an environment variable."
+        )
+    if source_path.resolve() == destination_path.resolve():
+        raise ConfigError(f"Sync source and destination are the same path: {source_path}. Skip sync for this profile.")
 
     rsync_cmd = str(config.tools.get("rsync", "rsync"))
     if use_rsync and which(rsync_cmd):
@@ -120,20 +128,23 @@ def sync_tree(
 def sync_raw(config: ResolvedConfig, *, dry_run: bool = False, checksum: bool = False) -> list[SyncItem]:
     source = config.sync.get("raw_source")
     if not source:
-        raise ValueError("Profile sync.raw_source is not configured.")
+        raise ConfigError(
+            "Profile sync.raw_source is not configured. "
+            "Set CHEDDAR_RAW_SOURCE=/path/to/incoming/RawData or create a private config/profiles.yaml. "
+            "If your data is already in RawData/, skip DA00 and run DA01/scan/convert."
+        )
     return sync_tree(source, config.raw_root, config=config, mode="raw", dry_run=dry_run, checksum=checksum)
 
 
 def sync_data_to_gpu(config: ResolvedConfig, *, dry_run: bool = False, checksum: bool = False) -> list[SyncItem]:
     gpu_root = config.sync.get("gpu_root")
     if not gpu_root:
-        raise ValueError("Profile sync.gpu_root is not configured.")
+        raise ConfigError("Profile sync.gpu_root is not configured.")
     return sync_tree(config.data_root, Path(gpu_root) / "Data", config=config, mode="data_to_gpu", dry_run=dry_run, checksum=checksum)
 
 
 def sync_output_from_gpu(config: ResolvedConfig, *, dry_run: bool = False, checksum: bool = False) -> list[SyncItem]:
     gpu_root = config.sync.get("gpu_root")
     if not gpu_root:
-        raise ValueError("Profile sync.gpu_root is not configured.")
+        raise ConfigError("Profile sync.gpu_root is not configured.")
     return sync_tree(Path(gpu_root) / "Output", config.output_root, config=config, mode="output_from_gpu", dry_run=dry_run, checksum=checksum)
-

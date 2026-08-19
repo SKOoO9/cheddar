@@ -8,6 +8,8 @@ import shutil
 import subprocess
 from typing import Iterable
 
+from .config import ConfigError
+
 
 def which(command: str) -> str | None:
     return shutil.which(command)
@@ -56,11 +58,29 @@ class CommandRunner:
             print("DRY RUN:", record["rendered"])
             return result
 
+        executable = cmd[0]
+        if "/" in executable:
+            executable_path = Path(executable)
+            if not executable_path.exists():
+                raise ConfigError(
+                    f"Command not found: {executable}. Check the tool path in your profile config."
+                )
+        else:
+            path_env = None if self.env is None else self.env.get("PATH")
+            if shutil.which(executable, path=path_env) is None:
+                raise ConfigError(
+                    f"Command not found on PATH: {executable}. "
+                    "Run `python -m cheddar env doctor --profile <profile>` to check tools, "
+                    "then set the command path in config/profiles.yaml or with the relevant environment variable."
+                )
+
         proc = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, env=self.env)
         record.update({"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr})
         self._record(record)
         if check and proc.returncode != 0:
-            raise subprocess.CalledProcessError(proc.returncode, cmd, output=proc.stdout, stderr=proc.stderr)
+            detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = "\n".join(detail[-8:])
+            raise ConfigError(f"Command failed with exit code {proc.returncode}: {shell_join(cmd)}\n{tail}")
         return CommandResult(cmd, proc.returncode, proc.stdout, proc.stderr)
 
     def _record(self, record: dict[str, object]) -> None:
@@ -83,4 +103,3 @@ def command_version(command: str, *, args: tuple[str, ...] = ("--version",), tim
         return {"command": command, "found": True, "path": found, "version": version, "returncode": proc.returncode}
     except Exception as exc:
         return {"command": command, "found": True, "path": found, "version": None, "error": str(exc)}
-

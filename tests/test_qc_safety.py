@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import unittest
 
 from cheddar.qc import audit_tracked_paths, is_forbidden_repo_path
@@ -17,15 +18,7 @@ class SafetyTests(unittest.TestCase):
         self.assertFalse(is_forbidden_repo_path("cheddar/config.py"))
 
     def test_repo_tree_contains_no_data_files(self) -> None:
-        paths = [
-            path.relative_to(REPO).as_posix()
-            for path in REPO.rglob("*")
-            if path.is_file()
-            and ".git" not in path.parts
-            and "__pycache__" not in path.parts
-            and ".pytest_cache" not in path.parts
-            and path.suffix != ".pyc"
-        ]
+        paths = subprocess.check_output(["git", "ls-files"], cwd=REPO, text=True).splitlines()
         audit = audit_tracked_paths(paths)
         self.assertTrue(audit["ok"], audit["forbidden"])
 

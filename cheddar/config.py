@@ -15,7 +15,7 @@ except ModuleNotFoundError:  # pragma: no cover - depends on local environment
 
 
 SUPPORTED_SYSTEMS = {"Linux", "Darwin"}
-ENV_DEFAULT_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]+)\}")
+ENV_DEFAULT_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}")
 
 
 class ConfigError(RuntimeError):

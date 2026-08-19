@@ -10,7 +10,7 @@
         "work": "Work"
       },
       "tools": {
-        "dcm2niix": "dcm2niix",
+        "dcm2niix": "${CHEDDAR_DCM2NIIX:-dcm2niix}",
         "mrconvert": "mrconvert",
         "dwidenoise": "dwidenoise",
         "mrdegibbs": "mrdegibbs",
@@ -26,12 +26,12 @@
         "eddy": "eddy",
         "eddy_cuda": "eddy_cuda",
         "topup": "topup",
-        "N4BiasFieldCorrection": "N4BiasFieldCorrection",
+        "N4BiasFieldCorrection": "${CHEDDAR_N4:-N4BiasFieldCorrection}",
         "rsync": "rsync"
       },
       "sync": {
-        "raw_source": "${CHEDDAR_RAW_SOURCE:-/path/to/smb/RawData}",
-        "gpu_root": "${CHEDDAR_GPU_ROOT:-/path/to/gpu/CHEDDAR}"
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-}",
+        "gpu_root": "${CHEDDAR_GPU_ROOT:-}"
       }
     },
     "smb-server": {
@@ -40,7 +40,7 @@
         "root": "${CHEDDAR_ROOT:-/mnt/smb/CHEDDAR}"
       },
       "sync": {
-        "raw_source": "${CHEDDAR_RAW_SOURCE:-/mnt/smb/incoming/CHEDDAR/RawData}"
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-}"
       }
     },
     "gpu-server": {
@@ -52,7 +52,7 @@
         "eddy_cuda": "eddy_cuda"
       },
       "sync": {
-        "raw_source": "${CHEDDAR_RAW_SOURCE:-/data/CHEDDAR/RawData}"
+        "raw_source": "${CHEDDAR_RAW_SOURCE:-}"
       }
     }
   }
