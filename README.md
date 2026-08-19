@@ -42,6 +42,8 @@ python -m cheddar convert --config config/study.example.yaml --profile local --d
 python -m cheddar preprocess --config config/study.example.yaml --profile local --dry-run
 ```
 
+`convert` cleans each subject's temporary `Work/convert/sub-*` folder before running `dcm2niix`, so reruns do not accumulate stale intermediate files. Add `--keep-work` only when you want to inspect previous scratch outputs while debugging conversion.
+
 ## Design Boundary
 
 `cheddar` is a wrapper/orchestrator. It does not implement DTI, DKI, NODDI, IMPULSED, or future CHEDDAR model fitting. Later, MATI should consume:
@@ -57,4 +59,3 @@ and write fitted maps into `Data/derivatives/fit-*`.
 ## Supported Systems
 
 Linux and macOS are supported. Windows is intentionally unsupported.
-

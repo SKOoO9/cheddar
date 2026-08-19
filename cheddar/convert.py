@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 from typing import Any
 
-from .config import ResolvedConfig
+from .config import ConfigError, ResolvedConfig
 from .derivatives import write_dataset_description, write_json
 from .dicom import SeriesInfo, classify_label, load_bidsmap, scan_raw
 from .paths import SubjectRecord, assign_subjects
@@ -116,6 +116,21 @@ def _update_json_sidecar(path: Path, updates: dict[str, Any], *, dry_run: bool =
     write_json(path, payload)
 
 
+def _clean_subject_workdir(config: ResolvedConfig, tmp: Path, *, dry_run: bool = False) -> bool:
+    convert_root = config.work_root / "convert"
+    tmp_resolved = tmp.resolve(strict=False)
+    convert_root_resolved = convert_root.resolve(strict=False)
+    if tmp_resolved == convert_root_resolved or not tmp_resolved.is_relative_to(convert_root_resolved):
+        raise ConfigError(f"Refusing to clean unsafe conversion work directory: {tmp}")
+    if not tmp.exists():
+        return False
+    if dry_run:
+        print(f"DRY RUN: remove temporary conversion directory {tmp}")
+        return True
+    shutil.rmtree(tmp)
+    return True
+
+
 def _organize_subject_conversion(
     config: ResolvedConfig,
     record: SubjectRecord,
@@ -176,7 +191,13 @@ def _organize_subject_conversion(
     return copied
 
 
-def convert_all(config: ResolvedConfig, *, dry_run: bool = False, force: bool = False) -> dict[str, Any]:
+def convert_all(
+    config: ResolvedConfig,
+    *,
+    dry_run: bool = False,
+    force: bool = False,
+    clean_work: bool = True,
+) -> dict[str, Any]:
     series = scan_raw(config.raw_root, config.bidsmap_path)
     source_folders = sorted({item.subject_folder for item in series})
     records = assign_subjects(config, source_folders, dry_run=dry_run)
@@ -194,6 +215,7 @@ def convert_all(config: ResolvedConfig, *, dry_run: bool = False, force: bool = 
         record = record_by_source[(source, config.default_session)]
         tmp = config.work_root / "convert" / record.participant_id
         runner = CommandRunner(config.output_root / "logs" / f"convert_{record.participant_id}.jsonl", dry_run=dry_run)
+        cleaned = _clean_subject_workdir(config, tmp, dry_run=dry_run) if clean_work else False
         if not dry_run:
             tmp.mkdir(parents=True, exist_ok=True)
         dicom_dir = subject_series[0].dicom_dir
@@ -209,7 +231,14 @@ def convert_all(config: ResolvedConfig, *, dry_run: bool = False, force: bool = 
             "%p_%s",
             dicom_dir,
         ])
-        copied = _organize_subject_conversion(config, record, subject_series, tmp, dry_run=dry_run, force=force)
-        summary["subjects"][record.participant_id] = {"source_folder": source, "series": copied}
+        if dry_run and clean_work:
+            copied = {}
+        else:
+            copied = _organize_subject_conversion(config, record, subject_series, tmp, dry_run=dry_run, force=force)
+        summary["subjects"][record.participant_id] = {
+            "source_folder": source,
+            "work_dir": str(tmp),
+            "work_cleaned": cleaned,
+            "series": copied,
+        }
     return summary
-
