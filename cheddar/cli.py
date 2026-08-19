@@ -61,7 +61,7 @@ def _cmd_sync(args: argparse.Namespace) -> int:
 
 def _cmd_convert(args: argparse.Namespace) -> int:
     config = _resolved(args)
-    summary = convert_all(config, dry_run=args.dry_run, force=args.force)
+    summary = convert_all(config, dry_run=args.dry_run, force=args.force, clean_work=not args.keep_work)
     _json_print(summary)
     return 0
 
@@ -110,7 +110,7 @@ def _cmd_run_all(args: argparse.Namespace) -> int:
 
     config = _resolved(args)
     payload = {
-        "convert": convert_all(config, dry_run=args.dry_run, force=args.force),
+        "convert": convert_all(config, dry_run=args.dry_run, force=args.force, clean_work=not args.keep_work),
         "preprocess_anat": preprocess_anat_all(config, dry_run=args.dry_run, force=args.force),
         "preprocess_dwi": preprocess_dwi_all(config, dry_run=args.dry_run, force=args.force),
     }
@@ -151,6 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_config_args(convert_parser)
     convert_parser.add_argument("--dry-run", action="store_true")
     convert_parser.add_argument("--force", action="store_true")
+    convert_parser.add_argument("--keep-work", action="store_true", help="Keep existing Work/convert scratch files before conversion.")
     convert_parser.set_defaults(func=_cmd_convert)
 
     preproc_parser = subparsers.add_parser("preprocess", help="Run anatomy and DWI preprocessing.")
@@ -176,6 +177,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_config_args(run_parser)
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--force", action="store_true")
+    run_parser.add_argument("--keep-work", action="store_true", help="Keep existing Work/convert scratch files before conversion.")
     run_parser.set_defaults(func=_cmd_run_all)
 
     return parser
