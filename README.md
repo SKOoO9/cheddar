@@ -44,6 +44,8 @@ python -m cheddar preprocess --config config/study.example.yaml --profile local 
 
 `convert` cleans each subject's temporary `Work/convert/sub-*` folder before running `dcm2niix`, so reruns do not accumulate stale intermediate files. Add `--keep-work` only when you want to inspect previous scratch outputs while debugging conversion.
 
+During DWI preprocessing, values at or below `preprocessing.dwi.b0_threshold` are treated as nominal b=0 volumes. CHEDDAR preserves the converted source gradients, writes exact zero b-values and b-vectors only to working and derivative files, and records both source and normalized b-values in the derivative volume table. The example threshold is `50 s/mm^2`; choose a study-specific value below the lowest intentionally acquired diffusion-weighted shell.
+
 ## Design Boundary
 
 `cheddar` is a wrapper/orchestrator. It does not implement DTI, DKI, NODDI, IMPULSED, or future CHEDDAR model fitting. Later, MATI should consume:

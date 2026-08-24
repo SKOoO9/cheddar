@@ -20,6 +20,15 @@ class DwiInput:
     bval: Path
 
 
+@dataclass(frozen=True)
+class MergedGradients:
+    bvals: np.ndarray
+    bvecs: np.ndarray
+    volume_rows: list[str]
+    first_bzero_index: int
+    bzero_count: int
+
+
 def _strip_nii(path: Path) -> Path:
     if path.name.endswith(".nii.gz"):
         return path.with_name(path.name[:-7])
@@ -53,31 +62,73 @@ def _find_dwi_inputs(config: ResolvedConfig, participant: str, session: str) -> 
     return inputs
 
 
-def _write_merged_gradients(inputs: list[DwiInput], bvec_out: Path, bval_out: Path, volume_table: Path) -> None:
+def _prepare_merged_gradients(inputs: list[DwiInput], bzero_threshold: float) -> MergedGradients:
+    if not np.isfinite(bzero_threshold) or bzero_threshold < 0:
+        raise ValueError(f"b0 threshold must be a finite non-negative number, got {bzero_threshold}")
+
     bvals: list[np.ndarray] = []
     bvecs: list[np.ndarray] = []
-    rows = ["volume\tacquisition\tsource_volume\tbval"]
+    rows = ["volume\tacquisition\tsource_volume\tsource_bval\tbval\tis_bzero"]
     offset = 0
     for item in inputs:
-        vals = np.loadtxt(item.bval, dtype=float).reshape(-1)
-        vec = _load_bvec(item.bvec)
-        if vec.shape[1] != vals.size:
-            raise ValueError(f"bvec/bval volume mismatch for {item.acq}: {vec.shape[1]} vs {vals.size}")
+        source_vals = np.loadtxt(item.bval, dtype=float).reshape(-1)
+        source_vec = _load_bvec(item.bvec)
+        if source_vec.shape[1] != source_vals.size:
+            raise ValueError(f"bvec/bval volume mismatch for {item.acq}: {source_vec.shape[1]} vs {source_vals.size}")
+        if not np.all(np.isfinite(source_vals)):
+            raise ValueError(f"bval file contains non-finite values: {item.bval}")
+
+        if np.any(source_vals < 0):
+            raise ValueError(f"bval file contains negative values: {item.bval}")
+
+        is_bzero = source_vals <= bzero_threshold
+        vals = source_vals.copy()
+        vec = source_vec.copy()
+        vals[is_bzero] = 0.0
+        vec[:, is_bzero] = 0.0
         bvals.append(vals)
         bvecs.append(vec)
-        for idx, bval in enumerate(vals):
-            rows.append(f"{offset + idx}\t{item.acq}\t{idx}\t{float(bval):.8g}")
-        offset += vals.size
+        for idx, (source_bval, bval, is_zero) in enumerate(zip(source_vals, vals, is_bzero, strict=True)):
+            rows.append(
+                f"{offset + idx}\t{item.acq}\t{idx}\t{float(source_bval):.8g}\t"
+                f"{float(bval):.8g}\t{str(bool(is_zero)).lower()}"
+            )
+        offset += source_vals.size
+
+    merged_bvals = np.concatenate(bvals)
+    merged_bvecs = np.concatenate(bvecs, axis=1)
+    bzero_indices = np.flatnonzero(merged_bvals == 0.0)
+    if bzero_indices.size == 0:
+        raise ValueError(f"No b=0 volumes found at or below threshold {bzero_threshold:g}")
+    return MergedGradients(
+        bvals=merged_bvals,
+        bvecs=merged_bvecs,
+        volume_rows=rows,
+        first_bzero_index=int(bzero_indices[0]),
+        bzero_count=int(bzero_indices.size),
+    )
+
+
+def _write_merged_gradients(
+    gradients: MergedGradients,
+    bvec_out: Path,
+    bval_out: Path,
+    volume_table: Path,
+) -> None:
     bval_out.parent.mkdir(parents=True, exist_ok=True)
-    np.savetxt(bval_out, np.concatenate(bvals).reshape(1, -1), fmt="%.10g")
-    np.savetxt(bvec_out, np.concatenate(bvecs, axis=1), fmt="%.10g")
-    volume_table.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    np.savetxt(bval_out, gradients.bvals.reshape(1, -1), fmt="%.10g")
+    np.savetxt(bvec_out, gradients.bvecs, fmt="%.10g")
+    volume_table.write_text("\n".join(gradients.volume_rows) + "\n", encoding="utf-8")
 
 
 def preprocess_dwi_subject(config: ResolvedConfig, participant: str, session: str, *, dry_run: bool = False, force: bool = False) -> dict[str, Any]:
     inputs = _find_dwi_inputs(config, participant, session)
     if not inputs:
         return {"status": "missing_dwi"}
+
+    dwi_settings = dict(config.preprocessing.get("dwi", {}))
+    bzero_threshold = float(dwi_settings.get("b0_threshold", 50.0))
+    gradients = _prepare_merged_gradients(inputs, bzero_threshold)
 
     paths = DataPaths(config)
     out_dir = paths.derivative_dir("dwi-preproc", participant, session, "dwi")
@@ -118,12 +169,23 @@ def preprocess_dwi_subject(config: ResolvedConfig, participant: str, session: st
     merged_bval = work_dir / f"{stem}_input_merged.bval"
     runner.run([config.tools.get("fslmerge", "fslmerge"), "-t", merged, *denoised])
     if dry_run:
-        print(f"DRY RUN: write merged gradients {merged_bvec}, {merged_bval}, {volume_table}")
+        print(
+            f"DRY RUN: normalize {gradients.bzero_count} b=0 volumes at or below "
+            f"{bzero_threshold:g} s/mm^2 and write {merged_bvec}, {merged_bval}, {volume_table}"
+        )
     else:
-        _write_merged_gradients(inputs, merged_bvec, merged_bval, volume_table)
+        _write_merged_gradients(gradients, merged_bvec, merged_bval, volume_table)
 
     b0_first = work_dir / "forward_b0_first.nii.gz"
-    runner.run([config.tools.get("fslroi", "fslroi"), merged, b0_first, "0", "1"])
+    runner.run(
+        [
+            config.tools.get("fslroi", "fslroi"),
+            merged,
+            b0_first,
+            str(gradients.first_bzero_index),
+            "1",
+        ]
+    )
     fmap_dir = paths.datatype_dir(participant, session, "fmap")
     reverse_candidates = sorted(fmap_dir.glob(f"{participant}_{session}_*_epi.nii*"))
     preproc_mif = work_dir / f"{stem}_desc-eddy_dwi.mif"
@@ -146,11 +208,21 @@ def preprocess_dwi_subject(config: ResolvedConfig, participant: str, session: st
         runner.run([config.tools.get("fslroi", "fslroi"), reverse_candidates[0], reverse_first, "0", "1"])
         runner.run([config.tools.get("fslmerge", "fslmerge"), "-t", b0_pair, b0_first, reverse_first])
         eddy_args.extend(["-rpe_pair", "-se_epi", b0_pair])
+        if gradients.first_bzero_index == 0:
+            eddy_args.append("-align_seepi")
+        else:
+            print(
+                "WARNING: The first nominal b=0 is not DWI volume 0; "
+                "running paired TOPUP without -align_seepi."
+            )
     else:
-        eddy_args.extend(["-rpe_none", "-align_seepi"])
-    eddy_options = list(config.preprocessing.get("dwi", {}).get("eddy_options", []))
+        eddy_args.append("-rpe_none")
+    eddy_options = list(dwi_settings.get("eddy_options", []))
     if eddy_options:
-        eddy_args.extend(["-eddy_options", " ".join(str(option) for option in eddy_options)])
+        eddy_option_string = " ".join(str(option) for option in eddy_options).strip()
+        if eddy_option_string:
+            # MRtrix requires this value to contain whitespace, even for one FSL option.
+            eddy_args.extend(["-eddy_options", f"{eddy_option_string} "])
     runner.run(eddy_args)
 
     biascorr_mif = work_dir / f"{stem}_desc-N4_dwi.mif"
@@ -175,6 +247,9 @@ def preprocess_dwi_subject(config: ResolvedConfig, participant: str, session: st
                     "PhaseEncodingDirection": config.diffusion.get("phase_encoding_direction", "j"),
                     "TotalReadoutTime": config.diffusion.get("total_readout_time"),
                     "VolumeTable": volume_table.name,
+                    "B0Threshold": bzero_threshold,
+                    "B0VolumesNormalized": gradients.bzero_count,
+                    "SourceGradientsPreserved": True,
                 },
             ),
         )
@@ -197,4 +272,3 @@ def preprocess_dwi_all(config: ResolvedConfig, *, dry_run: bool = False, force: 
                     force=force,
                 )
     return results
-
