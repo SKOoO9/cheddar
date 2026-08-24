@@ -45,6 +45,7 @@
       "brain_mask": true,
       "skullstrip": true,
       "prefer_eddy_cuda": true,
+      "b0_threshold": 50.0,
       "eddy_options": ["--repol"]
     }
   },
