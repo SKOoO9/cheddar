@@ -29,7 +29,8 @@
     "total_readout_time": 0.0827807,
     "merged_acq_label": "all",
     "acquisitions": ["tcos1", "tcos2", "tpgse1", "tpgse2"],
-    "reverse_b0_acq": "b0neg"
+    "reverse_b0_acq": "b0neg",
+    "mati_pulse_file": "${CHEDDAR_MATI_PULSE:-}"
   },
   "preprocessing": {
     "anat": {
@@ -38,6 +39,7 @@
       "skullstrip": true
     },
     "dwi": {
+      "strategy": "original-groups",
       "denoise": true,
       "degibbs": true,
       "topup_eddy": true,
@@ -46,6 +48,11 @@
       "skullstrip": true,
       "prefer_eddy_cuda": true,
       "b0_threshold": 50.0,
+      "encoding_group_fields": ["shape", "n", "delta", "Delta", "trise", "TE", "TR", "FA"],
+      "mati_bval_absolute_tolerance": 50.0,
+      "mati_bval_relative_tolerance": 0.05,
+      "topup_config": "b02b0.cnf",
+      "topup_mask_fraction": 0.2,
       "eddy_options": ["--repol"]
     }
   },

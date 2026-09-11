@@ -45,13 +45,17 @@ sourcedata/
 *subject_map*.tsv
 *participants_key*.tsv
 *.log
+dwifslpreproc-tmp-*/
 
 # Private local configuration
 config/study.yaml
 config/profiles.yaml
 config/bidsmap.yaml
+config/mati_pulse.json
+config/*.local.json
+config/*.private.json
+docs/CHEDDAR_pipeline_design.md
 *.local.yaml
 *.private.yaml
 .private/
 **/.private/
-

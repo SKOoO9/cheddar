@@ -15,6 +15,8 @@ from .runner import command_version
 REQUIRED_TOOLS = (
     "dcm2niix",
     "mrconvert",
+    "mrcat",
+    "mrinfo",
     "dwidenoise",
     "mrdegibbs",
     "dwifslpreproc",

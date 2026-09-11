@@ -77,12 +77,24 @@ def _cmd_preprocess(args: argparse.Namespace) -> int:
         if not args.dwi_only:
             results["anat"] = preprocess_anat_subject(config, args.subject, session, dry_run=args.dry_run, force=args.force)
         if not args.anat_only:
-            results["dwi"] = preprocess_dwi_subject(config, args.subject, session, dry_run=args.dry_run, force=args.force)
+            results["dwi"] = preprocess_dwi_subject(
+                config,
+                args.subject,
+                session,
+                dry_run=args.dry_run,
+                force=args.force,
+                strategy=args.dwi_strategy,
+            )
     else:
         if not args.dwi_only:
             results["anat"] = preprocess_anat_all(config, dry_run=args.dry_run, force=args.force)
         if not args.anat_only:
-            results["dwi"] = preprocess_dwi_all(config, dry_run=args.dry_run, force=args.force)
+            results["dwi"] = preprocess_dwi_all(
+                config,
+                dry_run=args.dry_run,
+                force=args.force,
+                strategy=args.dwi_strategy,
+            )
     _json_print(results)
     return 0
 
@@ -112,7 +124,12 @@ def _cmd_run_all(args: argparse.Namespace) -> int:
     payload = {
         "convert": convert_all(config, dry_run=args.dry_run, force=args.force, clean_work=not args.keep_work),
         "preprocess_anat": preprocess_anat_all(config, dry_run=args.dry_run, force=args.force),
-        "preprocess_dwi": preprocess_dwi_all(config, dry_run=args.dry_run, force=args.force),
+        "preprocess_dwi": preprocess_dwi_all(
+            config,
+            dry_run=args.dry_run,
+            force=args.force,
+            strategy=args.dwi_strategy,
+        ),
     }
     _json_print(payload)
     return 0
@@ -162,6 +179,11 @@ def build_parser() -> argparse.ArgumentParser:
     preproc_parser.add_argument("--dwi-only", action="store_true")
     preproc_parser.add_argument("--dry-run", action="store_true")
     preproc_parser.add_argument("--force", action="store_true")
+    preproc_parser.add_argument(
+        "--dwi-strategy",
+        choices=("original-groups", "shared-topup"),
+        help="Override preprocessing.dwi.strategy for this run.",
+    )
     preproc_parser.set_defaults(func=_cmd_preprocess)
 
     qc_parser = subparsers.add_parser("qc", help="Write or print lightweight data/QC summaries.")
@@ -178,6 +200,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.add_argument("--force", action="store_true")
     run_parser.add_argument("--keep-work", action="store_true", help="Keep existing Work/convert scratch files before conversion.")
+    run_parser.add_argument(
+        "--dwi-strategy",
+        choices=("original-groups", "shared-topup"),
+        help="Override preprocessing.dwi.strategy for this run.",
+    )
     run_parser.set_defaults(func=_cmd_run_all)
 
     return parser

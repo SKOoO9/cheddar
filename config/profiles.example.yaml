@@ -12,6 +12,8 @@
       "tools": {
         "dcm2niix": "${CHEDDAR_DCM2NIIX:-dcm2niix}",
         "mrconvert": "mrconvert",
+        "mrcat": "mrcat",
+        "mrinfo": "mrinfo",
         "dwidenoise": "dwidenoise",
         "mrdegibbs": "mrdegibbs",
         "dwifslpreproc": "dwifslpreproc",
