@@ -30,11 +30,14 @@ FORBIDDEN_FILENAMES = {
     "subject_map.tsv",
     "participants_key.tsv",
 }
+FORBIDDEN_DIR_PREFIXES = ("dwifslpreproc-tmp-",)
 
 
 def is_forbidden_repo_path(path: str | Path) -> bool:
     path = Path(path)
     if any(part in FORBIDDEN_DIR_NAMES for part in path.parts):
+        return True
+    if any(part.startswith(FORBIDDEN_DIR_PREFIXES) for part in path.parts):
         return True
     if path.name in FORBIDDEN_FILENAMES:
         return True
@@ -63,4 +66,3 @@ def data_tree_summary(data_root: Path) -> dict[str, Any]:
 def write_qc_summary(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-

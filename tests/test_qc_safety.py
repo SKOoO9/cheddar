@@ -15,6 +15,7 @@ class SafetyTests(unittest.TestCase):
         self.assertTrue(is_forbidden_repo_path("RawData/PRELIMINARY/Xu/file.DCM"))
         self.assertTrue(is_forbidden_repo_path("Data/sub-001/ses-01/dwi/file.nii.gz"))
         self.assertTrue(is_forbidden_repo_path("Data/.private/subject_map.tsv"))
+        self.assertTrue(is_forbidden_repo_path("dwifslpreproc-tmp-ABC123/command.txt"))
         self.assertFalse(is_forbidden_repo_path("cheddar/config.py"))
 
     def test_repo_tree_contains_no_data_files(self) -> None:

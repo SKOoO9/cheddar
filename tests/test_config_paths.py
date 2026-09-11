@@ -26,7 +26,7 @@ class ConfigPathTests(unittest.TestCase):
             os.environ["CHEDDAR_ROOT"] = tmp
             config = load_resolved_config(REPO / "config" / "study.example.yaml", "local")
             self.assertEqual(participant_id(1), "sub-001")
-            records = assign_subjects(config, ["Xu_244155", "Xu_264170"], dry_run=False)
+            records = assign_subjects(config, ["SYNTHETIC_A", "SYNTHETIC_B"], dry_run=False)
             self.assertEqual([record.participant_id for record in records], ["sub-001", "sub-002"])
             reloaded = read_subject_map(config.private_subject_map)
             self.assertEqual(len(reloaded), 2)
@@ -35,4 +35,3 @@ class ConfigPathTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
